@@ -6,7 +6,7 @@
 
 ## Papéis: a v4 governa, o harness executa
 
-O harness prd é um executor opcional. Camadas, não paralelismo: a v4 é o anel externo — contrato (main.md), memória entre sessões (journal/features), aceite (R.6.2), ciclo de vida; o pipeline é o miolo de execução dentro do anel. O que NUNCA acontece: o pipeline decidir aceite (R.6.2 é do anel) ou a memória viver no techspec (decisões com efeito além da SPEC sobem para features/ no fechamento). Distribuição: o init detecta o pipeline, oferece vendorizá-lo em `.claude/skills/` do projeto (versionado — devs e CI com as mesmas versões) e grava `interop` no manifesto.
+O harness prd é um executor opcional. Camadas, não paralelismo: a v4 é o anel externo — contrato (main.md), memória entre sessões (journal/features), aceite (R.6.2), ciclo de vida; o pipeline é o miolo de execução dentro do anel. O que NUNCA acontece: o pipeline decidir aceite (R.6.2 é do anel) ou a memória viver no techspec (decisões com efeito além da SPEC sobem para features/ no fechamento). Distribuição (v4.1.1): o init VENDORIZA o pipeline por padrão — `templates/skills/` + `templates/agents/` do harness → `.claude/skills/` e `.claude/agents/` DO PROJETO (repo auto-contido; devs e CI na mesma versão) — e grava `interop` no manifesto (default com pipeline: `inline`). Cópias globais em `~/.claude`, quando existirem, são executor equivalente e fonte de re-sync — nunca dependência.
 
 ## Porte decide quando o pipeline entra
 
@@ -19,6 +19,8 @@ Proposto pela IA no checkpoint (sinais: arquivos estimados, features tocadas, n�
 | **G** (grande) | multi-sessão/multi-área | completo OU parcial (à la carte: só techspec quando a arquitetura é o difícil; só tasks quando contrato+design estão claros) — via harness (este doc) ou standalone (`docs/rules/formats.md`) |
 
 Correção pontual nunca vê pipeline. Escalação legítima no meio: `[decisão] upgrade de porte P→M→G` no journal.
+
+**Porte G ⇒ caminho do pipeline é pergunta EXPLÍCITA no checkpoint** (`completo | só techspec | só tasks | sem pipeline`, com recomendação justificada), confirmada pelo usuário no mesmo round-trip do porte e ANTES da redação do main.md — nunca escolha implícita embutida no contrato. Havendo pipeline, a mesma pergunta colhe o **modo de execução** `autônomo | com gates` (item 5 do preâmbulo, abaixo). Detalhe e critérios de recomendação: rules/lifecycle.md §1.
 
 ## 1 feature = 1 SPEC (fases, nunca SPECs por fase)
 
@@ -48,7 +50,7 @@ As 8 skills do harness (cria-prd, cria-techspec, criar-tasks, executar-task, tas
 2. **Slug verbatim** — slug/workspace fornecido pelo chamador ou manifesto é usado como está; a skill nunca deriva um segundo identificador para a mesma feature.
 3. **main.md equivalente-PRD** — pré-requisito "prd.md existe" aceita o main.md da SPEC como documento de requisitos (destrava o uso à la carte do porte G parcial).
 4. **Dedupe de entrevista** — antes de qualquer pergunta de clarificação, a skill lê main.md + journal e pergunta SÓ o que ainda não foi respondido, registrando respostas inferidas com fonte.
-5. **Aprovações** — apresentações de plano/lista viram informativas (registra no journal e prossegue), EXCETO decisões que mudam critérios de aceite ou escopo da SPEC — essas SEMPRE exigem aprovação explícita do usuário. No executar-bugfix: implementação autônoma, EXCETO fix que altera critério contratado (1 pergunta por critério afetado) — alinha o "do not wait for approval" com R.6.2.
+5. **Aprovações — governadas pelo modo de execução** do checkpoint, registrado no journal (`autônomo | com gates`; sem registro → `com gates`, fail-safe): em `autônomo`, apresentações de plano/lista viram informativas (registra no journal e prossegue); em `com gates`, a skill PARA para aprovação explícita em 4 pontos — após /cria-prd (RFs), após /cria-techspec (decisões de design), após /criar-tasks (lista de tasks) e ANTES de cada /executar-task. Em AMBOS os modos, decisões que mudam critérios de aceite ou escopo da SPEC SEMPRE exigem aprovação explícita do usuário. No executar-bugfix: implementação autônoma, EXCETO fix que altera critério contratado (1 pergunta por critério afetado) — alinha o "do not wait for approval" com R.6.2.
 6. **Commands** — os labels do manifesto (`commands: {test, typecheck, lint, dev, e2e}`) têm precedência sobre qualquer comando hardcoded/detectado.
 7. **Retroalimentação (step final obrigatório)** — resumo datado de decisões/desvios/aprendizados apendado ao journal + ponteiros de artefato atualizados no main.md. executar-qa adicionalmente marca critérios cobertos por RF verificado com timestamp + link de evidência; executar-bugfix registra causas raiz como gotchas candidatos das features tocadas.
 

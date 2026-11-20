@@ -12,13 +12,13 @@ Artefatos opcionais de porte G, na RAIZ da pasta da SPEC (ou no workspace declar
 
 Mesmos nomes/moldes do harness prd (`tasks/prd-<slug>/`) — projetos alternam entre standalone e harness sem retrabalho.
 
-**Convenção RF-N (global):** requisitos funcionais numerados `RF-1..RF-n` com numeração GLOBAL e sequencial no `prd.md` inteiro (nunca reinicia por seção). Todo RF coberto por ≥1 critério do main.md via `(cobre RF-n)` — lint valida quando `prd.md` existe.
+**Convenção RF-N (global):** requisitos funcionais numerados `RF-1..RF-n` com numeração GLOBAL e sequencial no `prd.md` inteiro (nunca reinicia por seção). Todo RF coberto por ≥1 critério do main.md via `(cobre RF-n)` — lint valida quando `prd.md` existe. **Altitude de RF:** o RF nomeia a capacidade e o serviço (O QUÊ), nunca o mecanismo (COMO — transporte, endpoint, header, lib); mecanismo pertence à techspec (ex.: "Slack (OUTPUT)", não "Slack incoming-webhook") — o RF fica estável quando a decisão de implementação evolui.
 
 ## Procedimentos mínimos por artefato
 
 (Destilados do harness; quando o rigor máximo importar, use o harness via interop.)
 
-- **PRD:** ler main.md+journal ANTES e perguntar SÓ o que ainda não foi respondido (dedupe); clarificar com o usuário antes de redigir; PRD = O QUÊ/POR QUÊ, <2.000 palavras, ZERO solução de design; refinar critérios do main.md com `(cobre RF-n)` — mudança de contrato = validação humana.
+- **PRD:** ler main.md+journal ANTES e perguntar SÓ o que ainda não foi respondido (dedupe); clarificar com o usuário antes de redigir; PRD = O QUÊ/POR QUÊ, <2.000 palavras, ZERO solução de design; RF na altitude de capacidade (nunca mecanismo — ver Convenção RF-N acima); refinar critérios do main.md com `(cobre RF-n)` — mudança de contrato = validação humana.
 - **TechSpec:** pesquisar ANTES (padrões do próprio código + docs das libs); techspec = COMO, NÃO repete o PRD; decisões com efeito além da SPEC → `[decisão]` no journal (sobem a features no fechamento).
 - **Tasks:** propor a lista de ALTO NÍVEL e obter aprovação ANTES de gerar os `NN_task.md`; máx 15 tasks; cada task = entregável funcional incremental COM a própria suíte de testes.
 - **QA/evidência:** evidência bruta em `tmp/`; a citada → `evidence/` com nome determinístico; QA aprovado marca critérios cobertos no main.md com evidência (R.6.1); qa-report REJECTED ou bug High aberto bloqueia archive quando esses artefatos existem.

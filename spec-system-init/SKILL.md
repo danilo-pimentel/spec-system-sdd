@@ -148,6 +148,8 @@ Se responder "ok" → prossegue. Se editar um campo → aplica e reusa o resto. 
 | `templates/CONSTITUTION.md` | `docs/CONSTITUTION.md` |
 | `templates/INDEX.md` | `docs/INDEX.md` (stub "gerado"; `specctl index` assume depois) |
 | `templates/commands/spec.md` | `.claude/commands/spec.md` |
+| `templates/skills/*` (8 skills do pipeline prd + assets) | `.claude/skills/` do projeto (vendor por padrão — repo auto-contido) |
+| `templates/agents/task-reviewer.md` | `.claude/agents/task-reviewer.md` |
 | `templates/ci/docs-gate.yml` | `.github/workflows/docs-gate.yml` |
 
 Data/hora SEMPRE do relógio real (`node scripts/specctl.mjs stamp`; antes do specctl, `date +"%Y-%m-%d %H:%M"`). NUNCA timestamps do treinamento.
@@ -248,10 +250,8 @@ Para projeto com código substancial e docs vazias. Pré-requisito: v4 instalada
 
 Rodar durante o Step 1 de INIT e U.1 de UPGRADE. A v4 é auto-contida: **nunca modificar o outro harness nem referenciar ECC nos docs gerados.**
 
-- **Pipeline prd** (skills cria-prd/cria-techspec/criar-tasks/executar-* em `~/.claude/skills/` ou `.claude/skills/` do projeto; pastas `tasks/prd-*/` no repo): **reportar** presença e oferecer:
-  1. **Vendorizar** o pipeline em `.claude/skills/` DO PROJETO (cópia versionada — o repo fica auto-contido e o time inteiro usa a mesma versão);
-  2. **Setar `interop` no manifesto:** `external` (default zero-touch — skills gravam em `tasks/prd-<slug>/`; `specctl adopt-workspace` copia snapshot no fechamento) ou `inline` (artefatos dentro da pasta da SPEC; a cápsula injeta a substituição de caminho). Sem pipeline → `none`.
-  3. Em UPGRADE com `tasks/prd-*/` existentes: oferecer vínculo `**Workspace:**` nas SPECs correspondentes ou conversão em SPECs novas.
+- **Pipeline prd — VENDORIZADO POR PADRÃO (v4.1.1):** o harness CARREGA o pipeline em `templates/skills/` (8 skills + assets) e `templates/agents/task-reviewer.md`; o init copia para `.claude/skills/` e `.claude/agents/` DO PROJETO — repo auto-contido, time inteiro na mesma versão. Cópias globais em `~/.claude/skills/`, quando existirem, são executor equivalente e fonte de re-sync — nunca dependência (divergência global×vendorizado = warn no report). `interop` default com pipeline vendorizado: `inline`. Alternativas sob pedido: `external` (skills gravam em `tasks/prd-<slug>/`; `adopt-workspace` no fechamento) · `none` (sem pipeline; templates nativos de rules/formats-pipeline.md).
+  - Em UPGRADE com `tasks/prd-*/` existentes: oferecer vínculo `**Workspace:**` nas SPECs correspondentes ou conversão em SPECs novas.
 - **ECC** (`~/.claude/rules/ecc/`, agents ECC): apenas **reportar** coexistência. Regras ECC são do usuário/máquina; a v4 não depende delas nem as menciona.
 
 ---
@@ -291,9 +291,9 @@ Pendências:   <[digest-auto: revisar] ×N · SPECs v3 em janela compat ×N · a
 - ❌ Deletar `state.md`/`memory.md`/`RULES.md` v3 no upgrade — renomear `*.v3.bak` (R.5)
 - ❌ Editar à mão `INDEX.md`/`ARCHIVE-INDEX.md` (gerados por `specctl index`)
 - ❌ Fazer merge de hooks removendo/alterando hooks alheios ao specctl
-- ❌ Modificar as skills do harness prd ou da ECC — interop é 100% do lado da v4
+- ❌ Modificar as skills GLOBAIS (`~/.claude/skills/`) do harness prd ou qualquer coisa da ECC — a evolução do pipeline vive nos `templates/skills/` desta skill (fonte canônica) e chega aos projetos por vendor/upgrade
 - ❌ Pular o smoke `specctl lint` ou entregar init com erros/warnings
 
 ## Templates location
 
-Ao lado deste SKILL.md: `templates/RULES.md`, `templates/rules/*` (10 arquivos: formats, formats-pipeline, lifecycle, context, retrieval, verification, programs, team, interop, ci), `templates/CLAUDE.md`, `templates/AGENTS.md`, `templates/TAXONOMY.md`, `templates/ARCHITECTURE.md`, `templates/CONSTITUTION.md`, `templates/INDEX.md`, `templates/commands/spec.md`, `templates/hooks-settings.json`, `templates/ci/docs-gate.yml`, `templates/scripts/specctl.mjs`.
+Ao lado deste SKILL.md: `templates/RULES.md`, `templates/rules/*` (10 arquivos: formats, formats-pipeline, lifecycle, context, retrieval, verification, programs, team, interop, ci), `templates/CLAUDE.md`, `templates/AGENTS.md`, `templates/TAXONOMY.md`, `templates/ARCHITECTURE.md`, `templates/CONSTITUTION.md`, `templates/INDEX.md`, `templates/commands/spec.md`, `templates/skills/*` (pipeline prd vendorizável: cria-prd, cria-techspec, criar-tasks, executar-task, task-review, executar-review, executar-qa, executar-bugfix — com assets), `templates/agents/task-reviewer.md`, `templates/hooks-settings.json`, `templates/ci/docs-gate.yml`, `templates/scripts/specctl.mjs`.

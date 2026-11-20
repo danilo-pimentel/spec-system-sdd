@@ -67,5 +67,6 @@ Nunca compacte "seco". Direcione o que preservar:
 - Re-perguntar o que o usuário já respondeu; reler arquivos já lidos.
 - Esquecer classificação R.9, workspace declarado ou bans TIER-0.
 - Respostas mais lentas, genéricas ou incoerentes.
+- **Sinal automático (v4.1.1):** o guard-write injeta `[contexto] ~Nk tokens (X% da janela)` quando o contexto REAL cruza o limiar (janela: env > `context_window` do manifesto > detecção pelo transcript; re-lembra a cada +60k). Ao vê-lo: siga até a fronteira de fase, faça o flush e compacte direcionado — nunca corte no meio.
 
 Ação: flush do SNAPSHOT → `/compact` direcionado → o brief pós-compact re-ancora a sessão.

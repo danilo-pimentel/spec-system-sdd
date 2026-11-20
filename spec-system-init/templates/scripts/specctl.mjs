@@ -47,7 +47,7 @@ import os from 'node:os';
 import crypto from 'node:crypto';
 import { spawnSync, execSync } from 'node:child_process';
 
-const VERSION = '4.1.0';
+const VERSION = '4.1.1';
 const SCHEMA = 'sdd-4.0';
 const SPEC_RE = /^SPEC-\d{8}-\d{4}-[a-z0-9][a-z0-9-]*$/;
 const SPEC_REF_RE = /\bSPEC-\d{8}-\d{4}(?:-[a-z0-9][a-z0-9-]*)?\b/g;
@@ -2517,6 +2517,73 @@ function newLogHeadings(newText, oldText) {
   }
   return found;
 }
+// ---- sinal de contexto (doutrina "quando compactar" de rules/context.md virando sinal — v4.1.1) ----
+// Lê o último `usage` do transcript (só o tail, barato) e, quando o contexto REAL cruza o limiar
+// da janela, injeta additionalContext sugerindo /compact na PRÓXIMA fronteira de fase. Nunca
+// bloqueia; estado por sessão em os.tmpdir re-lembra só a cada +60k de crescimento (buckets).
+const CTX_WIN_STD = 200000, CTX_WIN_1M = 1000000;
+const CTX_TH_STD = 160000, CTX_TH_1M = 250000, CTX_STEP = 60000;
+function ctxLatestTokens(transcriptPath) {
+  if (!transcriptPath || typeof transcriptPath !== 'string') return null;
+  let fd;
+  try { fd = fs.openSync(transcriptPath, 'r'); } catch { return null; }
+  try {
+    const size = fs.fstatSync(fd).size;
+    const start = Math.max(0, size - 256 * 1024);
+    const buf = Buffer.alloc(size - start);
+    const n = fs.readSync(fd, buf, 0, buf.length, start);
+    const lines = buf.toString('utf8', 0, n).split('\n');
+    for (let i = lines.length - 1; i >= (start > 0 ? 1 : 0); i--) { // linha 0 de tail truncado = JSON parcial
+      const line = lines[i].trim(); if (!line) continue;
+      let rec; try { rec = JSON.parse(line); } catch { continue; }
+      const u = rec && rec.message && rec.message.usage;
+      if (!u || typeof u !== 'object') continue;
+      const t = (Number.isFinite(u.input_tokens) ? u.input_tokens : 0)
+        + (Number.isFinite(u.cache_read_input_tokens) ? u.cache_read_input_tokens : 0)
+        + (Number.isFinite(u.cache_creation_input_tokens) ? u.cache_creation_input_tokens : 0);
+      if (t > 0) return { tokens: t, model: rec.message && typeof rec.message.model === 'string' ? rec.message.model : '' };
+    }
+    return null;
+  } catch { return null; } finally { try { fs.closeSync(fd); } catch { /* nunca falha o hook */ } }
+}
+function maybeSuggestCompact(input, root) {
+  try {
+    const usage = ctxLatestTokens(input.transcript_path);
+    if (!usage) return null;
+    // janela: env > manifesto (context_window) > detecção pelo transcript ([1m] no model id ou tokens>200k)
+    const envWin = Number.parseInt(process.env.CLAUDE_CODE_AUTO_COMPACT_WINDOW || '', 10);
+    const manWin = root ? Number.parseInt(String(manifest(root).context_window || ''), 10) : NaN;
+    const win = Number.isInteger(envWin) && envWin > 0 ? envWin
+      : Number.isInteger(manWin) && manWin > 0 ? manWin
+      : (usage.model.includes('[1m]') || usage.tokens > CTX_WIN_STD) ? CTX_WIN_1M : CTX_WIN_STD;
+    const rawTh = process.env.COMPACT_CONTEXT_THRESHOLD;
+    const parsedTh = Number.parseInt(rawTh || '', 10);
+    if (parsedTh === 0) return null; // COMPACT_CONTEXT_THRESHOLD=0 desliga o sinal
+    const th = Number.isInteger(parsedTh) && parsedTh > 0 ? parsedTh : (win >= CTX_WIN_1M ? CTX_TH_1M : CTX_TH_STD);
+    if (usage.tokens < th) return null;
+    const rawIv = Number.parseInt(process.env.COMPACT_CONTEXT_INTERVAL || '', 10);
+    const step = Number.isInteger(rawIv) && rawIv > 0 ? rawIv : CTX_STEP;
+    const bucket = Math.floor((usage.tokens - th) / step);
+    const sid = String(input.session_id || 'default').replace(/[^a-zA-Z0-9_-]/g, '') || 'default';
+    const stateFile = P(os.tmpdir(), `specctl-ctx-${sid}`);
+    let last = -1;
+    try { const p = parseInt(fs.readFileSync(stateFile, 'utf8').trim(), 10); if (Number.isInteger(p) && p >= 0) last = p; } catch { /* primeiro disparo */ }
+    if (bucket <= last) return null;
+    try { fs.writeFileSync(stateFile, String(bucket)); } catch { /* sem estado, sem re-lembrete — aceitável */ }
+    try { // sweep de estado >14d de outras sessões — nunca falha o hook
+      const cut = Date.now() - 14 * 864e5;
+      for (const e of fs.readdirSync(os.tmpdir())) {
+        if (!e.startsWith('specctl-ctx-') || e === `specctl-ctx-${sid}`) continue;
+        const sf = P(os.tmpdir(), e);
+        try { if (fs.statSync(sf).mtimeMs < cut) fs.rmSync(sf, { force: true }); } catch { /* ignora */ }
+      }
+    } catch { /* ignora */ }
+    const pct = Math.round((usage.tokens / win) * 100);
+    const winLabel = win >= CTX_WIN_1M ? '1M' : `${Math.round(win / 1000)}k`;
+    return `[contexto] ~${Math.round(usage.tokens / 1000)}k tokens (${pct}% da janela ${winLabel}) — na PRÓXIMA fronteira de fase: flush do SNAPSHOT/journal e /compact direcionado (tabela "Quando compactar" em docs/rules/context.md). NUNCA no meio de implementação.`;
+  } catch { return null; }
+}
+
 function cmdGuardWrite() {
   const input = readStdinJson();
   if (!input) process.exit(0);
@@ -2611,6 +2678,11 @@ function cmdGuardWrite() {
         }
       }
     }
+  }
+  // sinal de contexto (não-bloqueante) — só depois de TODOS os gates permitirem a escrita
+  if (gated) {
+    const sug = maybeSuggestCompact(input, root);
+    if (sug) out(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: sug } }));
   }
   process.exit(0);
 }
@@ -2960,6 +3032,29 @@ function cmdSelfTest() {
     const root = stBase(tmp, 'guard-tmp');
     const payload = JSON.stringify({ tool_name: 'Write', tool_input: { file_path: P(root, 'saida.log'), content: 'log' } });
     expectRun(runCli(root, ['guard-write'], payload), 2, 'tmp/', 'guard-write temp');
+  });
+  fixture('guard-write-suggest-compact', () => {
+    const root = stBase(tmp, 'guard-ctx');
+    const sid = `st-${crypto.randomBytes(4).toString('hex')}`;
+    const tp = P(tmp, `transcript-${sid}.jsonl`);
+    writeFile(tp, JSON.stringify({ message: { model: 'claude-opus-4-8', usage: { input_tokens: 150000, cache_read_input_tokens: 25000, cache_creation_input_tokens: 1000 } } }) + '\n');
+    const payload = JSON.stringify({ tool_name: 'Write', tool_input: { file_path: P(root, 'docs', 'nota.md'), content: 'oi' }, transcript_path: tp, session_id: sid });
+    const r = runCli(root, ['guard-write'], payload);
+    expectRun(r, 0, 'additionalContext', 'guard-write sugere compact acima do limiar');
+    expect(r.out.includes('[contexto]'), 'guard-write: mensagem [contexto] ausente');
+    const r2 = runCli(root, ['guard-write'], payload);
+    expectRun(r2, 0, null, 'guard-write mesmo bucket');
+    expect(!r2.out.includes('additionalContext'), 'guard-write: re-sugeriu no MESMO bucket (estado por sessão falhou)');
+    // manifesto com context_window=1M: 176k < 250k (limiar 1M) → silêncio, mesmo sem marcador [1m]
+    const manFp = P(root, 'docs', '.spec-system.json');
+    const man = JSON.parse(read(manFp));
+    man.context_window = 1000000;
+    writeFile(manFp, JSON.stringify(man, null, 2));
+    const sid3 = `st-${crypto.randomBytes(4).toString('hex')}`;
+    const payload3 = JSON.stringify({ tool_name: 'Write', tool_input: { file_path: P(root, 'docs', 'nota.md'), content: 'oi' }, transcript_path: tp, session_id: sid3 });
+    const r3 = runCli(root, ['guard-write'], payload3);
+    expectRun(r3, 0, null, 'guard-write janela do manifesto');
+    expect(!r3.out.includes('additionalContext'), 'guard-write: ignorou context_window do manifesto (sugeriu a 176k numa janela 1M)');
   });
   fixture('stamp-check-now', () => {
     const root = stBase(tmp, 'stamp');

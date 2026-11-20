@@ -76,3 +76,4 @@ Prefira sempre o grader mais determinístico que o critério suportar; desça na
 - `pass@1` = passou de primeira · `pass@3` = ≥1 sucesso em 3 · `pass^3` = 3/3 consecutivos.
 - **`pass^3` só se aplica a porte G com flakiness OBSERVADA:** rode 3× e exija 3/3 (ou conserte a flakiness). `pass@3` serve a diagnóstico, não a aceite. Em P/M, verificação flaky é bug a corrigir, não a tolerar.
 - Intermitência persistente é problema real: registre `[descoberta]` no journal e trate como bug. Não jogue o dado até passar.
+- **Critério sobre saída ESTOCÁSTICA/IA** (ex.: desenho por IA produz grafo válido) é o outro uso legítimo: capacidade fecha com `pass@3`; regressão crítica de release exige `pass^3` — as k execuções registradas em `evidence/`. Grader flaky em gate de fechamento é anti-padrão: conserte o grader, nunca role o dado.
