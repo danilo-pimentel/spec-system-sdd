@@ -1,6 +1,8 @@
 # Spec System SDD
 
-O Spec System SDD é um kit de *Spec-Driven Development* para executar trabalho de software com IA a partir de especificações versionadas no mesmo repositório do código. Cada SPEC define o resultado esperado, os limites e os critérios de aceite. O agente planeja, implementa, testa, registra evidências e retoma o trabalho a partir desses arquivos. A pessoa responsável aprova o contrato, as mudanças de escopo e o encerramento.
+O Spec System SDD é um kit de *Spec-Driven Development* para executar trabalho de software com IA a partir de especificações versionadas no mesmo repositório do código. **Danilo Pimentel** desenvolveu o núcleo do kit, incluindo o protocolo de ciclo de vida das SPECs, os mecanismos de verificação e, a partir da v4, a CLI `specctl.mjs`.
+
+Cada SPEC define o resultado esperado, os limites e os critérios de aceite. O agente planeja, implementa, testa, registra evidências e retoma o trabalho a partir desses arquivos. A pessoa responsável aprova o contrato, as mudanças de escopo e o encerramento.
 
 O Claude Code fornece a sessão, as ferramentas e as skills. O kit adiciona as regras de trabalho, a memória entre sessões, os comandos de ciclo de vida e as verificações reproduzíveis. `scripts/specctl.mjs` é uma CLI Node.js sem dependências npm. Ela prepara contexto, controla transições e executa gates. A sessão do Claude conduz a implementação e escolhe o próximo passo de acordo com a SPEC e o journal.
 
@@ -149,7 +151,9 @@ Em ambos os modos, mudanças nos critérios ou no escopo e o encerramento depend
 
 ### Skills incorporadas na v4.1
 
-Agradecimento a **Pablo Hadler** pela contribuição das oito skills do pipeline integradas ao kit. A v4.1 traz também os templates e referências dessas skills e um subagente `task-reviewer` para revisão por tarefa. [Pablo Hadler no GitHub (`@pmhg`)](https://github.com/pmhg)
+A v4.1 incorpora as oito skills listadas abaixo com crédito a **Pablo Hadler**, que autorizou sua publicação no kit. [Pablo Hadler no GitHub (`@pmhg`)](https://github.com/pmhg)
+
+A v4.1 inclui também os templates e as referências dessas skills e um subagente `task-reviewer` para revisão por tarefa.
 
 | Skill | Quando a sessão a usa | Resultado |
 | --- | --- | --- |
