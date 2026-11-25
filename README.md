@@ -151,7 +151,7 @@ Em ambos os modos, mudanças nos critérios ou no escopo e o encerramento depend
 
 ### Skills incorporadas na v4.1
 
-A v4.1 incorpora as oito skills listadas abaixo com crédito a **Pablo Hadler**, que autorizou sua publicação no kit. [Pablo Hadler no GitHub (`@pmhg`)](https://github.com/pmhg)
+A v4.1 incorpora as oito skills listadas abaixo com crédito a **Pablo Hadler**, que autorizou sua publicação no kit. [Pablo Hadler no GitHub (`@pmhg`)](https://github.com/pmhg) · [Pablo Hadler no LinkedIn](https://www.linkedin.com/in/pablo-hadler-650a5223/)
 
 A v4.1 inclui também os templates e as referências dessas skills e um subagente `task-reviewer` para revisão por tarefa.
 
